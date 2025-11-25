@@ -1,4 +1,5 @@
 ```text
+    %USERPROFILE%/
     target/
     .idea/
     *.iml
