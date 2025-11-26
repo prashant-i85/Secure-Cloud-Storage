@@ -26,8 +26,9 @@ public class FileController {
     }
 
     @GetMapping
-    public List<FileEntity> list() {
-        return fileService.listFiles();
+    public List<FileEntity> list(@AuthenticationPrincipal Jwt principal) {
+        // Pass the logged-in user's ID to the service
+        return fileService.listFiles(principal.getSubject());
     }
 
     @GetMapping("/{id}/download")
@@ -42,5 +43,15 @@ public class FileController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + entity.getFilename() + "\"")
                 .body(data);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<String> delete(@PathVariable String id, @AuthenticationPrincipal Jwt principal) {
+        try {
+            fileService.deleteFile(id, principal.getSubject());
+            return ResponseEntity.ok("File deleted successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error deleting file: " + e.getMessage());
+        }
     }
 }

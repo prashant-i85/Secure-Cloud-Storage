@@ -45,3 +45,5 @@ aws.region=ap-south-1
 aws.s3.bucket=YOUR_BUCKET_NAME
 aws.dynamodb.table=SecureFiles
 aws.kms.key-id=YOUR_KMS_KEY_ID
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=

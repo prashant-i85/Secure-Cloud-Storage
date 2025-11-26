@@ -15,9 +15,10 @@ public class FileEntity {
     private String ownerId;
     private String filename;
     private String s3Key;
-    private String encryptedAesKey; // The AES key encrypted by KMS
-    private String iv; // Initialization Vector
+    private String encryptedAesKey;
+    private String iv;
     private String contentType;
+    private Long fileSize; // <--- NEW FIELD
 
     @DynamoDbPartitionKey
     public String getFileId() { return fileId; }
@@ -28,4 +29,5 @@ public class FileEntity {
     public String getEncryptedAesKey() { return encryptedAesKey; }
     public String getIv() { return iv; }
     public String getContentType() { return contentType; }
+    public Long getFileSize() { return fileSize; } // <--- Getter
 }

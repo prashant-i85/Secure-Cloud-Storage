@@ -2,123 +2,335 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Secure Cloud Storage</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    <style>
+        :root { --primary-color: #4f46e5; --bg-color: #f3f4f6; }
+        body { background-color: var(--bg-color); font-family: 'Segoe UI', sans-serif; color: #1f2937; }
+
+        /* Modern Branding */
+        .brand-logo {
+            background: linear-gradient(135deg, #4f46e5, #818cf8);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            font-weight: 800; letter-spacing: -0.5px;
+        }
+
+        /* LOADING OVERLAY (Restored Cloud Icon Style) */
+        #loadingOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #ffffff; z-index: 99999;
+            display: flex; justify-content: center; align-items: center; flex-direction: column;
+            transition: opacity 0.5s ease-out;
+        }
+        /* Pulse Animation for the Cloud Logo */
+        .loader-logo { font-size: 3rem; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
+
+        /* Hide sections initially */
+        #authSection, #dashboardSection, #navRightSide { display: none; }
+
+        /* Cards */
+        .category-card {
+            border: none; border-radius: 24px; background: white; padding: 30px;
+            text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.03); cursor: pointer;
+            transition: all 0.3s ease; border: 1px solid rgba(0,0,0,0.03);
+        }
+        .category-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(79, 70, 229, 0.15); }
+        .icon-circle {
+            width: 70px; height: 70px; background: #e0e7ff; color: var(--primary-color);
+            border-radius: 20px; display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 20px; font-size: 1.8rem; transition: transform 0.3s;
+        }
+        .category-card:hover .icon-circle { transform: scale(1.1) rotate(5deg); }
+
+        /* Floating Button */
+        .fab-btn {
+            position: fixed; bottom: 40px; right: 40px; width: 65px; height: 65px;
+            border-radius: 20px; background: var(--primary-color); color: white;
+            border: none; box-shadow: 0 10px 25px rgba(79, 70, 229, 0.4);
+            font-size: 1.8rem; display: flex; align-items: center; justify-content: center;
+            transition: transform 0.2s; z-index: 100;
+        }
+        .fab-btn:hover { transform: scale(1.05); color: white; }
+
+        /* Modals */
+        .modal-content { border-radius: 24px; border: none; box-shadow: 0 25px 50px rgba(0,0,0,0.15); }
+        .modal-backdrop.show { backdrop-filter: blur(8px); background-color: rgba(0, 0, 0, 0.7); }
+        #deleteConfirmModal { z-index: 10000 !important; }
+
+        /* Profile */
+        #profileImage { transition: all 0.3s ease; object-fit: cover; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        #profileImage:hover { transform: scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+    </style>
 </head>
-<body class="container mt-5">
-<h2>🔐 Secure Cloud Storage</h2>
+<body>
 
-<div id="authSection">
-    <button class="btn btn-primary" onclick="login()">Login with AWS Cognito</button>
+<div id="loadingOverlay">
+    <div class="loader-logo text-primary"><i class="bi bi-cloud-check-fill"></i></div>
+    <h5 class="mt-3 text-muted fw-bold spacing-2" id="loadingText">AUTHENTICATING...</h5>
+    <div class="spinner-border text-primary mt-2" style="width: 1.5rem; height: 1.5rem; border-width: 2px;" role="status"></div>
 </div>
 
-<div id="appSection" style="display:none;">
-    <div class="mb-3">
-        <h4>Upload File</h4>
-        <input type="file" id="fileInput" class="form-control">
-        <button class="btn btn-success mt-2" onclick="uploadFile()">Upload Encrypted</button>
+<nav class="navbar navbar-light bg-white shadow-sm py-3 mb-5">
+    <div class="container">
+        <a class="navbar-brand fs-3 d-flex align-items-center" href="#">
+            <i class="bi bi-cloud-check-fill text-primary me-2"></i>
+            <span class="brand-logo">Secure Cloud Storage</span>
+        </a>
+        <div class="d-flex align-items-center" id="navRightSide">
+            <div class="position-relative me-3" data-bs-toggle="tooltip" title="Change photo">
+                <img src="https://via.placeholder.com/150/cccccc/ffffff?text=User" alt="Profile" id="profileImage" class="rounded-circle" width="50" height="50" onclick="document.getElementById('profileUpload').click()">
+                <input type="file" id="profileUpload" accept="image/*" style="display: none;" onchange="updateProfilePhoto(this)">
+            </div>
+            <button onclick="logout()" class="btn btn-light text-danger fw-bold rounded-pill py-2 px-4 btn-sm border">Logout</button>
+        </div>
     </div>
-    <hr>
-    <h4>My Files</h4>
-    <ul id="fileList" class="list-group"></ul>
+</nav>
+
+<div id="authSection" class="container text-center mt-5" style="height: 60vh; display: flex; flex-direction: column; justify-content: center;">
+    <h1 class="display-3 fw-bold mb-4 brand-logo" style="line-height: 1.2;">Your Digital Vault.<br>Secured by AES-256.</h1>
+    <p class="text-muted mb-5 fs-5">Zero-knowledge encryption. Your files, your keys, your cloud.</p>
+    <div><button class="btn btn-primary btn-lg rounded-pill px-5 py-3 shadow-lg fw-bold" onclick="login()"><i class="bi bi-amazon me-2"></i> Login with AWS</button></div>
 </div>
+
+<div id="dashboardSection" class="container">
+    <h4 class="mb-4 fw-bold text-secondary">My Secure Files</h4>
+    <div class="row g-4">
+        <div class="col-6 col-md-4 col-lg-2"><div class="category-card" onclick="openCategory('image')"><div class="icon-circle"><i class="bi bi-images"></i></div><h6 class="fw-bold">Photos</h6><p class="text-muted small mb-0" id="count-image">0</p></div></div>
+        <div class="col-6 col-md-4 col-lg-2"><div class="category-card" onclick="openCategory('video')"><div class="icon-circle" style="background: #fce7f3; color: #db2777;"><i class="bi bi-play-circle-fill"></i></div><h6 class="fw-bold">Videos</h6><p class="text-muted small mb-0" id="count-video">0</p></div></div>
+        <div class="col-6 col-md-4 col-lg-2"><div class="category-card" onclick="openCategory('audio')"><div class="icon-circle" style="background: #ede9fe; color: #8b5cf6;"><i class="bi bi-music-note-beamed"></i></div><h6 class="fw-bold">Music</h6><p class="text-muted small mb-0" id="count-audio">0</p></div></div>
+        <div class="col-6 col-md-4 col-lg-2"><div class="category-card" onclick="openCategory('application')"><div class="icon-circle" style="background: #dcfce7; color: #16a34a;"><i class="bi bi-file-earmark-text-fill"></i></div><h6 class="fw-bold">Docs</h6><p class="text-muted small mb-0" id="count-application">0</p></div></div>
+        <div class="col-6 col-md-4 col-lg-2"><div class="category-card" onclick="openCategory('other')"><div class="icon-circle" style="background: #f3f4f6; color: #4b5563;"><i class="bi bi-grid-fill"></i></div><h6 class="fw-bold">Others</h6><p class="text-muted small mb-0" id="count-other">0</p></div></div>
+    </div>
+    <div class="mt-5 p-5 bg-white rounded-5 shadow-sm text-center"><h5 class="fw-bold mb-3">Need Support?</h5><a href="mailto:sunymaurya1613@gmail.com" class="btn btn-outline-primary rounded-pill px-4"><i class="bi bi-envelope-fill me-2"></i> sunymaurya1613@gmail.com</a></div>
+</div>
+
+<button id="fabBtn" class="fab-btn" data-bs-toggle="modal" data-bs-target="#uploadModal" style="display:none;"><i class="bi bi-cloud-upload-fill"></i></button>
+
+<div class="modal fade" id="uploadModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content p-4">
+            <div class="modal-header border-0"><h4 class="modal-title fw-bold">Upload Securely</h4><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body text-center">
+                <div class="border border-2 border-dashed rounded-4 p-5 mb-3 bg-light" onclick="document.getElementById('fileInput').click()" style="cursor: pointer;">
+                    <i class="bi bi-cloud-arrow-up display-1 text-primary opacity-50"></i>
+                    <p class="mt-3 fw-bold text-secondary">Drop files here or click to browse</p>
+                    <input type="file" id="fileInput" class="form-control" style="display: none;">
+                </div>
+                <p id="selectedFileName" class="text-primary fw-bold small"></p>
+                <button class="btn btn-primary w-100 rounded-pill py-3 fw-bold" onclick="uploadFile()"><i class="bi bi-lock-fill me-2"></i> Encrypt & Upload</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content text-center p-3 border border-danger border-opacity-25 shadow-lg">
+            <div class="modal-body"><div class="mb-3 text-danger display-1"><i class="bi bi-exclamation-octagon-fill"></i></div><h5 class="fw-bold text-danger">Delete File?</h5><p class="text-muted small">Permanently remove from cloud?</p><div class="d-flex gap-2 justify-content-center mt-4"><button type="button" class="btn btn-light rounded-pill px-3 fw-bold" data-bs-dismiss="modal">Cancel</button><button type="button" class="btn btn-danger rounded-pill px-4 fw-bold" onclick="confirmDelete()">Yes, Delete</button></div></div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="fileViewerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header border-0 pb-0"><h4 class="modal-title fw-bold" id="viewerTitle">Files</h4><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body pt-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <span class="text-muted small">Encrypted Files</span>
+                    <select class="form-select w-auto shadow-sm border-0 bg-light rounded-pill ps-3 pe-5" id="sortSelect" onchange="renderCurrentCategory()">
+                        <option value="name-asc">Name (A-Z)</option><option value="name-desc">Name (Z-A)</option>
+                    </select>
+                </div>
+                <div id="fileListContainer" class="list-group list-group-flush"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="mediaPlayerModal" tabindex="-1">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content bg-dark text-white border-0">
+
+            <div class="modal-header border-0 p-3 bg-dark">
+                <h5 class="modal-title text-truncate" id="mediaTitle">Preview</h5>
+                <div class="ms-auto">
+                    <button class="btn btn-sm btn-outline-light me-2" id="newTabBtn" onclick="">Open in New Tab <i class="bi bi-box-arrow-up-right"></i></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" onclick="stopMedia()"></button>
+                </div>
+            </div>
+
+            <div class="modal-body p-0 d-flex justify-content-center align-items-center bg-black" style="height: 100%;">
+                <div id="mediaContainer" class="w-100 h-100 d-flex justify-content-center align-items-center">
+                    <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    let token = null;
-
-    // 1. CONFIGURE THIS
-    const COGNITO_DOMAIN = "https://ap-south-1nailx8tif.auth.ap-south-1.amazoncognito.com"; // Found in Cognito -> App Integration -> Domain name
-    const CLIENT_ID = "ak4at5qbloie37to088a6h90s"; // From Phase 1
+    // --- CONFIGURATION ---
+    const COGNITO_DOMAIN = "https://ap-south-1nailx8tif.auth.ap-south-1.amazoncognito.com\n"; // UPDATE THIS
+    const CLIENT_ID = "ak4at5qbloie37to088a6h90s"; // UPDATE THIS
     const REDIRECT_URI = "http://localhost:8080/index.html";
 
-    // Check if we just came back from login
+    let token = null;
+    let allFiles = [];
+    let currentCategory = 'all';
+    let fileToDeleteId = null;
+
+    // --- INIT ---
     window.onload = function() {
+        const loader = document.getElementById('loadingOverlay');
+        const savedPhoto = localStorage.getItem('userProfilePhoto');
+        if (savedPhoto) document.getElementById('profileImage').src = savedPhoto;
+
         const hash = window.location.hash;
-        if (hash.includes("id_token")) {
-            token = hash.split("id_token=")[1].split("&")[0];
-            document.getElementById("authSection").style.display = "none";
-            document.getElementById("appSection").style.display = "block";
-            loadFiles();
-        }
+
+        setTimeout(() => {
+            if (hash.includes("id_token")) {
+                token = hash.split("id_token=")[1].split("&")[0];
+                document.getElementById("authSection").style.display = "none";
+                document.getElementById("dashboardSection").style.display = "block";
+                document.getElementById("navRightSide").style.setProperty("display", "flex", "important");
+                document.getElementById("fabBtn").style.display = "flex";
+                loadFiles();
+                loadProfilePhoto();
+                window.history.pushState("", document.title, window.location.pathname);
+            } else {
+                document.getElementById("loadingText").innerText = "PLEASE LOGIN";
+                document.getElementById("authSection").style.display = "block";
+                document.getElementById("dashboardSection").style.display = "none";
+                document.getElementById("navRightSide").style.setProperty("display", "none", "important");
+            }
+            loader.style.opacity = '0';
+            setTimeout(() => loader.style.display = 'none', 500);
+        }, 800);
     };
 
-    function login() {
-        window.location.href = `${COGNITO_DOMAIN}/login?client_id=${CLIENT_ID}&response_type=token&scope=email+openid&redirect_uri=${REDIRECT_URI}`;
-    }
+    function login() { window.location.href = `${COGNITO_DOMAIN}/login?client_id=${CLIENT_ID}&response_type=token&scope=email+openid&redirect_uri=${REDIRECT_URI}`; }
+    function logout() { token = null; location.reload(); }
 
-    // Replace your old uploadFile function with this one
-    async function uploadFile() {
-        const fileInput = document.getElementById("fileInput");
-        const file = fileInput.files[0];
-
-        if (!file) {
-            alert("Please select a file first!");
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append("file", file);
-
-        try {
-            const response = await fetch("/api/files/upload", {
-                method: "POST",
-                headers: { "Authorization": "Bearer " + token },
-                body: formData
-            });
-
-            if (response.ok) {
-                alert("✅ Success! File Encrypted & Uploaded.");
-                loadFiles(); // Refresh the list
-            } else {
-                // If the server failed, show the error code
-                alert("❌ Upload Failed! Server Error: " + response.status);
-            }
-        } catch (error) {
-            alert("❌ Network Error: " + error.message);
-        }
-    }
-
+    // --- FILES & API ---
     async function loadFiles() {
-        const res = await fetch("/api/files", {
-            headers: { "Authorization": "Bearer " + token }
-        });
-        const files = await res.json();
-        const list = document.getElementById("fileList");
-        list.innerHTML = "";
-        files.forEach(f => {
-            // OLD: onclick="download('${f.fileId}')"
-// NEW: onclick="download('${f.fileId}', '${f.filename}')"
-
-            list.innerHTML += `<li class="list-group-item d-flex justify-content-between">
-                ${f.filename}
-                <button class="btn btn-sm btn-outline-primary" onclick="download('${f.fileId}', '${f.filename}')">Download</button>
-            </li>`;
-        });
+        try {
+            const res = await fetch("/api/files", { headers: { "Authorization": "Bearer " + token } });
+            if(res.ok) { allFiles = await res.json(); updateCounts(); }
+        } catch (e) { console.error(e); }
     }
 
-    async function download(id, filename) {
+    async function confirmDelete() {
+        if(!fileToDeleteId) return;
+        const modal = bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal'));
         try {
-            const res = await fetch(`/api/files/${id}/download`, {
-                headers: { "Authorization": "Bearer " + token }
-            });
+            const res = await fetch(`/api/files/${fileToDeleteId}`, { method: 'DELETE', headers: { "Authorization": "Bearer " + token } });
+            if(res.ok) { loadFiles(); modal.hide(); if(document.getElementById('fileViewerModal').classList.contains('show')) setTimeout(() => renderCurrentCategory(), 500); }
+        } catch(e) { alert("Error: " + e.message); }
+    }
+    function requestDelete(id) { fileToDeleteId = id; new bootstrap.Modal(document.getElementById('deleteConfirmModal')).show(); }
 
-            if (!res.ok) throw new Error("Download failed");
+    // --- MEDIA VIEWER ---
+    async function openMedia(id, type, filename) {
+        const modal = new bootstrap.Modal(document.getElementById('mediaPlayerModal'));
+        const container = document.getElementById('mediaContainer');
+        document.getElementById('mediaTitle').innerText = filename;
 
+        container.innerHTML = '<div class="text-center"><div class="spinner-border text-light mb-3"></div><p class="text-light">Decrypting Secure File...</p></div>';
+        modal.show();
+
+        try {
+            const res = await fetch(`/api/files/${id}/download`, { headers: { "Authorization": "Bearer " + token } });
+            const blobData = await res.blob();
+            const blob = new Blob([blobData], { type: type });
+            const url = window.URL.createObjectURL(blob);
+
+            document.getElementById('newTabBtn').onclick = () => window.open(url, '_blank');
+
+            if (type.startsWith('video')) {
+                container.innerHTML = `<video controls autoplay style="max-width: 100%; max-height: 90vh;"><source src="${url}" type="${type}"></video>`;
+            } else if (type.startsWith('image')) {
+                container.innerHTML = `<img src="${url}" style="max-width: 100%; max-height: 90vh; object-fit: contain;">`;
+            } else if (type.startsWith('audio')) {
+                container.innerHTML = `<div class="p-5 text-center"><i class="bi bi-music-note-beamed display-1 text-primary mb-4"></i><br><audio controls autoplay style="width: 300px;"><source src="${url}" type="${type}"></audio></div>`;
+            } else if (type === 'application/pdf') {
+                container.innerHTML = `<embed src="${url}" type="application/pdf" width="100%" height="100%">`;
+            } else {
+                container.innerHTML = `<p class="text-white">Preview not supported. <a href="${url}" download="${filename}" class="text-primary">Download</a> instead.</p>`;
+            }
+        } catch (e) {
+            container.innerHTML = `<p class="text-danger">Error loading media: ${e.message}</p>`;
+        }
+    }
+
+    function stopMedia() { document.getElementById('mediaContainer').innerHTML = ''; }
+    async function downloadFile(id, filename) {
+        try {
+            const res = await fetch(`/api/files/${id}/download`, { headers: { "Authorization": "Bearer " + token } });
             const blob = await res.blob();
             const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-
-            // HERE IS THE FIX: Use the variable 'filename' instead of "decrypted_file"
-            a.download = filename;
-
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-        } catch (e) {
-            alert("Error downloading file: " + e.message);
-        }
+            const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
+        } catch(e) { alert("Download failed"); }
     }
+
+    // --- UI HELPERS ---
+    function updateCounts() {
+        const counts = { image: 0, video: 0, audio: 0, application: 0, other: 0 };
+        allFiles.forEach(f => {
+            let type = f.contentType.split('/')[0];
+            if (type === 'image') counts.image++; else if (type === 'video') counts.video++; else if (type === 'audio') counts.audio++; else if (f.contentType === 'application/pdf') counts.application++; else counts.other++;
+        });
+        document.getElementById('count-image').innerText = counts.image; document.getElementById('count-video').innerText = counts.video; document.getElementById('count-audio').innerText = counts.audio; document.getElementById('count-application').innerText = counts.application; document.getElementById('count-other').innerText = counts.other;
+    }
+
+    function openCategory(category) {
+        currentCategory = category;
+        document.getElementById('viewerTitle').innerText = category === 'application' ? 'DOCUMENTS' : category.toUpperCase() + "S";
+        new bootstrap.Modal(document.getElementById('fileViewerModal')).show();
+        renderCurrentCategory();
+    }
+
+    function renderCurrentCategory() {
+        const container = document.getElementById('fileListContainer'); container.innerHTML = '';
+        let filtered = allFiles.filter(f => {
+            let type = f.contentType.split('/')[0];
+            if (currentCategory === 'other') return type !== 'image' && type !== 'video' && type !== 'audio' && f.contentType !== 'application/pdf';
+            if (currentCategory === 'application') return f.contentType === 'application/pdf';
+            return type === currentCategory;
+        });
+        const sortVal = document.getElementById('sortSelect').value;
+        filtered.sort((a, b) => sortVal === 'name-asc' ? a.filename.localeCompare(b.filename) : b.filename.localeCompare(a.filename));
+        if(filtered.length === 0) container.innerHTML = '<div class="text-center p-5 text-muted">No files found.</div>';
+        filtered.forEach(f => {
+            let icon = '<i class="bi bi-file-earmark"></i>', btn = '';
+            if(f.contentType.startsWith('image')) { icon = '<i class="bi bi-file-image text-primary"></i>'; btn = `<button class="btn btn-sm btn-light text-primary border me-2" onclick="openMedia('${f.fileId}', '${f.contentType}', '${f.filename}')">View</button>`; }
+            else if(f.contentType.startsWith('video')) { icon = '<i class="bi bi-file-play text-danger"></i>'; btn = `<button class="btn btn-sm btn-light text-danger border me-2" onclick="openMedia('${f.fileId}', '${f.contentType}', '${f.filename}')">Play</button>`; }
+            else if(f.contentType.startsWith('audio')) { icon = '<i class="bi bi-file-music text-purple"></i>'; btn = `<button class="btn btn-sm btn-light text-purple border me-2" onclick="openMedia('${f.fileId}', '${f.contentType}', '${f.filename}')">Play</button>`; }
+            else if(f.contentType === 'application/pdf') { icon = '<i class="bi bi-file-pdf text-danger"></i>'; btn = `<button class="btn btn-sm btn-light text-danger border me-2" onclick="openMedia('${f.fileId}', '${f.contentType}', '${f.filename}')">Read</button>`; }
+            container.innerHTML += `<div class="list-group-item d-flex align-items-center justify-content-between p-3 border mb-2 rounded-3 hover-shadow"><div class="d-flex align-items-center"><div class="me-3 fs-3">${icon}</div><div class="text-truncate" style="max-width: 200px;"><div class="fw-bold text-dark">${f.filename}</div><div class="small text-muted">${f.contentType}</div></div></div><div class="d-flex align-items-center">${btn}<button class="btn btn-sm btn-light border rounded-circle me-2" onclick="downloadFile('${f.fileId}', '${f.filename}')"><i class="bi bi-download"></i></button><button class="btn btn-sm btn-light text-danger border rounded-circle" onclick="requestDelete('${f.fileId}')"><i class="bi bi-trash"></i></button></div></div>`;
+        });
+    }
+
+    document.getElementById('fileInput').addEventListener('change', function() { if(this.files[0]) document.getElementById('selectedFileName').innerText = this.files[0].name; });
+    async function uploadFile() {
+        const file = document.getElementById("fileInput").files[0];
+        if (!file) return alert("Please select a file!");
+        const formData = new FormData(); formData.append("file", file);
+        try {
+            const btn = document.querySelector('#uploadModal .btn-primary'); btn.innerHTML = 'Encrypting...'; btn.disabled = true;
+            const res = await fetch("/api/files/upload", { method: "POST", headers: { "Authorization": "Bearer " + token }, body: formData });
+            if (res.ok) { bootstrap.Modal.getInstance(document.getElementById('uploadModal')).hide(); loadFiles(); } else alert("Upload Failed: " + res.status);
+        } catch (e) { alert("Error: " + e.message); }
+        finally { document.querySelector('#uploadModal .btn-primary').innerHTML = '<i class="bi bi-lock-fill me-2"></i> Encrypt & Upload'; document.querySelector('#uploadModal .btn-primary').disabled = false; }
+    }
+    async function updateProfilePhoto(input) { if (input.files[0]) { const fd = new FormData(); fd.append("file", input.files[0]); fetch("/api/profile/upload", {method:"POST", headers:{"Authorization":"Bearer "+token}, body:fd}); document.getElementById('profileImage').src = URL.createObjectURL(input.files[0]); } }
+    async function loadProfilePhoto() { fetch("/api/profile/photo", {headers:{"Authorization":"Bearer "+token}}).then(r=>r.ok?r.blob():null).then(b=>{if(b)document.getElementById('profileImage').src=URL.createObjectURL(b)});}
 </script>
 </body>
 </html>
