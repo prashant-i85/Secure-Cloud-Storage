@@ -1,0 +1,5 @@
+com/securestorage/FileController.class
+com/securestorage/EncryptionService.class
+com/securestorage/SecurityConfig.class
+com/securestorage/SecureStorageApplication.class
+com/securestorage/AwsConfig.class
