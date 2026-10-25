@@ -2,40 +2,40 @@ package com.securestorage;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import software.amazon.awssdk.core.SdkBytes;
-import software.amazon.awssdk.services.kms.KmsClient;
-import software.amazon.awssdk.services.kms.model.DecryptRequest;
-import software.amazon.awssdk.services.kms.model.EncryptRequest;
 
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
-import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.util.Base64;
 
 @Service
 public class EncryptionService {
 
-    private final KmsClient kmsClient;
+    @Value("${app.master-key}")
+    private String masterKeyString;
 
-    @Value("${aws.kms.key-id}")
-    private String kmsKeyId;
+    private SecretKey masterKey;
 
-    public EncryptionService(KmsClient kmsClient) {
-        this.kmsClient = kmsClient;
+    // Helper to load the Master Key lazily
+    private SecretKey getMasterKey() {
+        if (masterKey == null) {
+            byte[] decodedKey = Base64.getDecoder().decode(masterKeyString);
+            masterKey = new SecretKeySpec(decodedKey, "AES");
+        }
+        return masterKey;
     }
 
-    // 1. Generate a new AES Key
+    // 1. Generate a new AES Key for a specific file
     public SecretKey generateAesKey() throws Exception {
         KeyGenerator keyGen = KeyGenerator.getInstance("AES");
         keyGen.init(256);
         return keyGen.generateKey();
     }
 
-    // 2. Encrypt Data with AES (Local)
+    // 2. Encrypt Data (File Content)
     public byte[] encryptData(byte[] data, SecretKey key, byte[] iv) throws Exception {
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
         GCMParameterSpec spec = new GCMParameterSpec(128, iv);
@@ -43,7 +43,7 @@ public class EncryptionService {
         return cipher.doFinal(data);
     }
 
-    // 3. Decrypt Data with AES (Local)
+    // 3. Decrypt Data (File Content)
     public byte[] decryptData(byte[] encryptedData, SecretKey key, byte[] iv) throws Exception {
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
         GCMParameterSpec spec = new GCMParameterSpec(128, iv);
@@ -51,22 +51,20 @@ public class EncryptionService {
         return cipher.doFinal(encryptedData);
     }
 
-    // 4. Encrypt the AES Key using KMS (Cloud)
-    public String encryptKeyWithKms(SecretKey aesKey) {
-        SdkBytes bytes = SdkBytes.fromByteArray(aesKey.getEncoded());
-        EncryptRequest req = EncryptRequest.builder()
-                .keyId(kmsKeyId)
-                .plaintext(bytes)
-                .build();
-        return Base64.getEncoder().encodeToString(kmsClient.encrypt(req).ciphertextBlob().asByteArray());
+    // 4. Encrypt the File Key using the Master Key (Replaces KMS)
+    public String encryptKeyLocally(SecretKey fileKey) throws Exception {
+        Cipher cipher = Cipher.getInstance("AES"); // Standard AES Wrapping
+        cipher.init(Cipher.WRAP_MODE, getMasterKey());
+        byte[] wrappedKey = cipher.wrap(fileKey);
+        return Base64.getEncoder().encodeToString(wrappedKey);
     }
 
-    // 5. Decrypt the AES Key using KMS (Cloud)
-    public SecretKey decryptKeyWithKms(String encryptedKeyBase64) {
-        SdkBytes bytes = SdkBytes.fromByteArray(Base64.getDecoder().decode(encryptedKeyBase64));
-        DecryptRequest req = DecryptRequest.builder().ciphertextBlob(bytes).build();
-        byte[] decryptedBytes = kmsClient.decrypt(req).plaintext().asByteArray();
-        return new SecretKeySpec(decryptedBytes, "AES");
+    // 5. Decrypt the File Key using the Master Key (Replaces KMS)
+    public SecretKey decryptKeyLocally(String encryptedKeyBase64) throws Exception {
+        byte[] wrappedKey = Base64.getDecoder().decode(encryptedKeyBase64);
+        Cipher cipher = Cipher.getInstance("AES");
+        cipher.init(Cipher.UNWRAP_MODE, getMasterKey());
+        return (SecretKey) cipher.unwrap(wrappedKey, "AES", Cipher.SECRET_KEY);
     }
 
     public byte[] generateIv() {

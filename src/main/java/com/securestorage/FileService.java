@@ -7,10 +7,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
-import software.amazon.awssdk.enhanced.dynamodb.Key; // <--- This was missing
+import software.amazon.awssdk.enhanced.dynamodb.Key;
 import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import java.io.IOException;
+import java.util.Iterator;
 
 import javax.crypto.SecretKey;
 import java.util.Base64;
@@ -59,7 +61,7 @@ public class FileService {
         SecretKey aesKey = encryptionService.generateAesKey();
         byte[] iv = encryptionService.generateIv();
         byte[] encryptedContent = encryptionService.encryptData(file.getBytes(), aesKey, iv);
-        String encryptedAesKey = encryptionService.encryptKeyWithKms(aesKey);
+        String encryptedAesKey = encryptionService.encryptKeyLocally(aesKey);
 
         // 3. Upload Encrypted File to S3
         s3Client.putObject(PutObjectRequest.builder().bucket(bucketName).key(s3Key).build(),
@@ -109,7 +111,7 @@ public class FileService {
                 .readAllBytes();
 
         // 4. Decrypt Key via KMS
-        SecretKey aesKey = encryptionService.decryptKeyWithKms(entity.getEncryptedAesKey());
+        SecretKey aesKey = encryptionService.decryptKeyLocally(entity.getEncryptedAesKey());
         byte[] iv = Base64.getDecoder().decode(entity.getIv());
 
         // 5. Decrypt Content
@@ -160,4 +162,7 @@ public class FileService {
                 .build();
         return dynamoDb.table(tableName, TableSchema.fromBean(FileEntity.class)).getItem(key);
     }
+
+
+
 }

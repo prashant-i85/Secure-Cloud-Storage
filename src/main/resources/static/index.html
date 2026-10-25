@@ -9,30 +9,36 @@
 
     <style>
         :root { --primary-color: #4f46e5; --bg-color: #f3f4f6; }
-        body { background-color: var(--bg-color); font-family: 'Segoe UI', sans-serif; color: #1f2937; }
 
-        /* Modern Branding */
+        body {
+            background: linear-gradient(135deg, #eef2ff 0%, #ffffff 100%);
+            font-family: 'Segoe UI', sans-serif;
+            color: #1f2937;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        .global-shape { position: fixed; border-radius: 50%; filter: blur(60px); opacity: 0.6; z-index: -1; pointer-events: none; }
+        .shape-1 { width: 300px; height: 300px; background: #c7d2fe; top: -100px; left: -100px; }
+        .shape-2 { width: 400px; height: 400px; background: #e0e7ff; bottom: -100px; right: -100px; }
+
         .brand-logo {
             background: linear-gradient(135deg, #4f46e5, #818cf8);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             font-weight: 800; letter-spacing: -0.5px;
         }
 
-        /* LOADING OVERLAY (Restored Cloud Icon Style) */
         #loadingOverlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #ffffff; z-index: 99999;
             display: flex; justify-content: center; align-items: center; flex-direction: column;
             transition: opacity 0.5s ease-out;
         }
-        /* Pulse Animation for the Cloud Logo */
         .loader-logo { font-size: 3rem; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.1); opacity: 0.7; } 100% { transform: scale(1); opacity: 1; } }
 
-        /* Hide sections initially */
         #authSection, #dashboardSection, #navRightSide { display: none; }
 
-        /* Cards */
         .category-card {
             border: none; border-radius: 24px; background: white; padding: 30px;
             text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.03); cursor: pointer;
@@ -46,7 +52,28 @@
         }
         .category-card:hover .icon-circle { transform: scale(1.1) rotate(5deg); }
 
-        /* Floating Button */
+        .feature-card {
+            background: white; border-radius: 20px; padding: 2rem; height: 100%;
+            border: 1px solid rgba(0,0,0,0.05); transition: transform 0.3s;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+        }
+        .feature-card:hover { transform: translateY(-5px); box-shadow: 0 15px 40px rgba(0,0,0,0.08); }
+        .feature-icon { font-size: 2.5rem; color: var(--primary-color); margin-bottom: 1rem; }
+
+        .btn-custom-primary {
+            background-color: var(--primary-color); color: white; border: none;
+            padding: 12px 35px; font-weight: 600; border-radius: 50px;
+            transition: all 0.2s; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+        }
+        .btn-custom-primary:hover { background-color: #4338ca; color: white; transform: translateY(-2px); }
+
+        .btn-custom-outline {
+            background-color: white; color: var(--primary-color); border: 2px solid var(--primary-color);
+            padding: 12px 35px; font-weight: 600; border-radius: 50px;
+            transition: all 0.2s;
+        }
+        .btn-custom-outline:hover { background-color: #f5f3ff; transform: translateY(-2px); }
+
         .fab-btn {
             position: fixed; bottom: 40px; right: 40px; width: 65px; height: 65px;
             border-radius: 20px; background: var(--primary-color); color: white;
@@ -56,25 +83,26 @@
         }
         .fab-btn:hover { transform: scale(1.05); color: white; }
 
-        /* Modals */
         .modal-content { border-radius: 24px; border: none; box-shadow: 0 25px 50px rgba(0,0,0,0.15); }
         .modal-backdrop.show { backdrop-filter: blur(8px); background-color: rgba(0, 0, 0, 0.7); }
         #deleteConfirmModal { z-index: 10000 !important; }
 
-        /* Profile */
         #profileImage { transition: all 0.3s ease; object-fit: cover; cursor: pointer; border: 2px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         #profileImage:hover { transform: scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
 
+<div class="global-shape shape-1"></div>
+<div class="global-shape shape-2"></div>
+
 <div id="loadingOverlay">
     <div class="loader-logo text-primary"><i class="bi bi-cloud-check-fill"></i></div>
-    <h5 class="mt-3 text-muted fw-bold spacing-2" id="loadingText">AUTHENTICATING...</h5>
+    <h5 class="mt-3 text-muted fw-bold spacing-2" id="loadingText">LOADING...</h5>
     <div class="spinner-border text-primary mt-2" style="width: 1.5rem; height: 1.5rem; border-width: 2px;" role="status"></div>
 </div>
 
-<nav class="navbar navbar-light bg-white shadow-sm py-3 mb-5">
+<nav class="navbar navbar-light bg-transparent py-3 sticky-top">
     <div class="container">
         <a class="navbar-brand fs-3 d-flex align-items-center" href="#">
             <i class="bi bi-cloud-check-fill text-primary me-2"></i>
@@ -90,13 +118,63 @@
     </div>
 </nav>
 
-<div id="authSection" class="container text-center mt-5" style="height: 60vh; display: flex; flex-direction: column; justify-content: center;">
-    <h1 class="display-3 fw-bold mb-4 brand-logo" style="line-height: 1.2;">Your Digital Vault.<br>Secured by AES-256.</h1>
-    <p class="text-muted mb-5 fs-5">Zero-knowledge encryption. Your files, your keys, your cloud.</p>
-    <div><button class="btn btn-primary btn-lg rounded-pill px-5 py-3 shadow-lg fw-bold" onclick="login()"><i class="bi bi-amazon me-2"></i> Login with AWS</button></div>
+<div id="authSection">
+    <div class="container hero-content pt-5 text-center">
+        <div class="row justify-content-center">
+            <div class="col-lg-8" style="padding-bottom: 4rem;">
+                <h1 class="display-3 fw-bold mb-3 text-dark" style="line-height: 1.2;">
+                    Store Your World.<br>
+                    <span class="brand-logo">Secure & Free.</span>
+                </h1>
+                <p class="text-muted mb-5 fs-5">
+                    Experience the simplest cloud storage. Get <strong>200MB of free space</strong> instantly to store your documents, photos, and memories safely.
+                </p>
+
+                <div class="d-flex gap-3 justify-content-center flex-wrap">
+                    <a id="loginLink" href="#" class="btn btn-custom-primary text-decoration-none">
+                        <i class="bi bi-box-arrow-in-right me-2"></i> Login
+                    </a>
+
+                    <a id="signupLink" href="#" class="btn btn-custom-outline text-decoration-none">
+                        <i class="bi bi-person-plus me-2"></i> Create Account
+                    </a>
+                </div>
+
+                <p class="mt-4 text-muted small">
+                    <i class="bi bi-check-circle-fill text-success me-1"></i> No credit card required for free tier
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container pb-5">
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="feature-card text-center">
+                    <div class="feature-icon"><i class="bi bi-hdd-fill"></i></div>
+                    <h5 class="fw-bold">200MB Free Storage</h5>
+                    <p class="text-muted small">Start with a generous free tier. Perfect for your essential documents, secure backups, and personal files.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card text-center">
+                    <div class="feature-icon"><i class="bi bi-shield-check-fill"></i></div>
+                    <h5 class="fw-bold">Secure Vault</h5>
+                    <p class="text-muted small">Your personal digital vault. We prioritize your privacy with industry-standard security practices.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="feature-card text-center">
+                    <div class="feature-icon"><i class="bi bi-cloud-arrow-up-fill"></i></div>
+                    <h5 class="fw-bold">Anywhere Access</h5>
+                    <p class="text-muted small">Built on AWS cloud infrastructure, ensuring your files are available whenever and wherever you need them.</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<div id="dashboardSection" class="container">
+<div id="dashboardSection" class="container mt-4">
     <h4 class="mb-4 fw-bold text-secondary">My Secure Files</h4>
     <div class="row g-4">
         <div class="col-6 col-md-4 col-lg-2"><div class="category-card" onclick="openCategory('image')"><div class="icon-circle"><i class="bi bi-images"></i></div><h6 class="fw-bold">Photos</h6><p class="text-muted small mb-0" id="count-image">0</p></div></div>
@@ -120,8 +198,23 @@
                     <p class="mt-3 fw-bold text-secondary">Drop files here or click to browse</p>
                     <input type="file" id="fileInput" class="form-control" style="display: none;">
                 </div>
-                <p id="selectedFileName" class="text-primary fw-bold small"></p>
-                <button class="btn btn-primary w-100 rounded-pill py-3 fw-bold" onclick="uploadFile()"><i class="bi bi-lock-fill me-2"></i> Encrypt & Upload</button>
+
+                <div id="fileDetails" class="mt-3" style="display:none;">
+                    <div class="d-flex align-items-center justify-content-center bg-white p-2 rounded shadow-sm border w-auto d-inline-flex">
+                        <span id="selectedFileName" class="text-primary fw-bold small me-3 text-truncate" style="max-width: 200px;"></span>
+                        <button class="btn btn-sm btn-outline-danger rounded-circle p-0 d-flex align-items-center justify-content-center" style="width: 24px; height: 24px;" onclick="clearFileSelection()" title="Remove File">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <p id="fileError" class="text-danger fw-bold small mt-3" style="display:none;">
+                    <i class="bi bi-exclamation-triangle-fill"></i> File limit exceeded (Max 10MB)
+                </p>
+
+                <button id="uploadBtn" class="btn btn-primary w-100 rounded-pill py-3 fw-bold mt-3" onclick="uploadFile()">
+                    <i class="bi bi-cloud-arrow-up-fill me-2"></i> Upload Your File
+                </button>
             </div>
         </div>
     </div>
@@ -155,7 +248,6 @@
 <div class="modal fade" id="mediaPlayerModal" tabindex="-1">
     <div class="modal-dialog modal-fullscreen">
         <div class="modal-content bg-dark text-white border-0">
-
             <div class="modal-header border-0 p-3 bg-dark">
                 <h5 class="modal-title text-truncate" id="mediaTitle">Preview</h5>
                 <div class="ms-auto">
@@ -163,7 +255,6 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" onclick="stopMedia()"></button>
                 </div>
             </div>
-
             <div class="modal-body p-0 d-flex justify-content-center align-items-center bg-black" style="height: 100%;">
                 <div id="mediaContainer" class="w-100 h-100 d-flex justify-content-center align-items-center">
                     <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div>
@@ -176,10 +267,15 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <script>
-    // --- CONFIGURATION ---
-    const COGNITO_DOMAIN = "https://ap-south-1nailx8tif.auth.ap-south-1.amazoncognito.com\n"; // UPDATE THIS
-    const CLIENT_ID = "ak4at5qbloie37to088a6h90s"; // UPDATE THIS
-    const REDIRECT_URI = "http://localhost:8080/index.html";
+    // --- 1. CONFIGURE COGNITO ---
+    const COGNITO_DOMAIN = "https://my-secure-cloud.auth.ap-south-1.amazoncognito.com";
+    const CLIENT_ID = "4ag6d3b3c9sgkp5oogie6o9isr";
+    const REDIRECT_URI = "https://askprashant.me/index.html";
+
+    // Build Login/Signup URLs
+    const authParams = `client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=email+openid`;
+    document.getElementById('loginLink').href = `${COGNITO_DOMAIN}/login?${authParams}`;
+    document.getElementById('signupLink').href = `${COGNITO_DOMAIN}/signup?${authParams}`;
 
     let token = null;
     let allFiles = [];
@@ -195,8 +291,10 @@
         const hash = window.location.hash;
 
         setTimeout(() => {
-            if (hash.includes("id_token")) {
-                token = hash.split("id_token=")[1].split("&")[0];
+            if (hash.includes("id_token") || hash.includes("access_token")) {
+                const params = new URLSearchParams(hash.replace("#", "?"));
+                token = params.get("id_token") || params.get("access_token");
+
                 document.getElementById("authSection").style.display = "none";
                 document.getElementById("dashboardSection").style.display = "block";
                 document.getElementById("navRightSide").style.setProperty("display", "flex", "important");
@@ -205,7 +303,6 @@
                 loadProfilePhoto();
                 window.history.pushState("", document.title, window.location.pathname);
             } else {
-                document.getElementById("loadingText").innerText = "PLEASE LOGIN";
                 document.getElementById("authSection").style.display = "block";
                 document.getElementById("dashboardSection").style.display = "none";
                 document.getElementById("navRightSide").style.setProperty("display", "none", "important");
@@ -215,7 +312,6 @@
         }, 800);
     };
 
-    function login() { window.location.href = `${COGNITO_DOMAIN}/login?client_id=${CLIENT_ID}&response_type=token&scope=email+openid&redirect_uri=${REDIRECT_URI}`; }
     function logout() { token = null; location.reload(); }
 
     // --- FILES & API ---
@@ -317,18 +413,61 @@
         });
     }
 
-    document.getElementById('fileInput').addEventListener('change', function() { if(this.files[0]) document.getElementById('selectedFileName').innerText = this.files[0].name; });
+    document.getElementById('fileInput').addEventListener('change', function() {
+        const file = this.files[0];
+        const errorMsg = document.getElementById('fileError');
+        const fileDetails = document.getElementById('fileDetails');
+        const uploadBtn = document.getElementById('uploadBtn');
+
+        if (!file) { fileDetails.style.display = 'none'; return; }
+
+        if (file.size > 10 * 1024 * 1024) {
+            errorMsg.style.display = 'block';
+            fileDetails.style.display = 'none';
+            uploadBtn.disabled = true;
+            this.value = '';
+        } else {
+            errorMsg.style.display = 'none';
+            document.getElementById('selectedFileName').innerText = file.name;
+            fileDetails.style.display = 'block';
+            uploadBtn.disabled = false;
+        }
+    });
+
+    function clearFileSelection() {
+        const input = document.getElementById('fileInput');
+        input.value = '';
+        document.getElementById('fileDetails').style.display = 'none';
+        document.getElementById('fileError').style.display = 'none';
+        document.getElementById('uploadBtn').disabled = false;
+    }
+
     async function uploadFile() {
         const file = document.getElementById("fileInput").files[0];
         if (!file) return alert("Please select a file!");
         const formData = new FormData(); formData.append("file", file);
         try {
-            const btn = document.querySelector('#uploadModal .btn-primary'); btn.innerHTML = 'Encrypting...'; btn.disabled = true;
+            const btn = document.getElementById('uploadBtn');
+            btn.innerHTML = 'Uploading...';
+            btn.disabled = true;
+
             const res = await fetch("/api/files/upload", { method: "POST", headers: { "Authorization": "Bearer " + token }, body: formData });
-            if (res.ok) { bootstrap.Modal.getInstance(document.getElementById('uploadModal')).hide(); loadFiles(); } else alert("Upload Failed: " + res.status);
+
+            if (res.ok) {
+                bootstrap.Modal.getInstance(document.getElementById('uploadModal')).hide();
+                loadFiles();
+                clearFileSelection();
+            } else {
+                alert("Upload Failed: " + res.status);
+            }
         } catch (e) { alert("Error: " + e.message); }
-        finally { document.querySelector('#uploadModal .btn-primary').innerHTML = '<i class="bi bi-lock-fill me-2"></i> Encrypt & Upload'; document.querySelector('#uploadModal .btn-primary').disabled = false; }
+        finally {
+            const btn = document.getElementById('uploadBtn');
+            btn.innerHTML = '<i class="bi bi-cloud-arrow-up-fill me-2"></i> Upload Your File';
+            btn.disabled = false;
+        }
     }
+
     async function updateProfilePhoto(input) { if (input.files[0]) { const fd = new FormData(); fd.append("file", input.files[0]); fetch("/api/profile/upload", {method:"POST", headers:{"Authorization":"Bearer "+token}, body:fd}); document.getElementById('profileImage').src = URL.createObjectURL(input.files[0]); } }
     async function loadProfilePhoto() { fetch("/api/profile/photo", {headers:{"Authorization":"Bearer "+token}}).then(r=>r.ok?r.blob():null).then(b=>{if(b)document.getElementById('profileImage').src=URL.createObjectURL(b)});}
 </script>

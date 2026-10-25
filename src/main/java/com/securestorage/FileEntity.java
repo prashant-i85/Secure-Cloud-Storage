@@ -18,7 +18,7 @@ public class FileEntity {
     private String encryptedAesKey;
     private String iv;
     private String contentType;
-    private Long fileSize; // <--- NEW FIELD
+    private Long fileSize;
 
     @DynamoDbPartitionKey
     public String getFileId() { return fileId; }
